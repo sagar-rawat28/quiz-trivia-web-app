@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Dynamic Quiz & Trivia App with lives, bonuses, stats, achievements and more" />
+  <title>Quiz Trivia | Dynamic Live Questions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
+</head>
+<body>
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p id="loadingText">Fetching fresh questions...</p>
+    </div>
+  </div>
+
+  <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+
+  <div class="container">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">🧠</div>
+        <span>QuizTrivia</span>
+      </div>
+      <div class="header-actions">
+        <span id="apiBadge" class="api-badge live" title="Questions source">Live API</span>
+        <button class="icon-btn" id="statsBtn" title="Your Stats" aria-label="Stats">📊</button>
+        <button class="icon-btn" id="soundBtn" title="Toggle Sound" aria-label="Toggle Sound">🔊</button>
+        <button class="icon-btn" id="themeBtn" title="Toggle Theme" aria-label="Toggle Theme">🌙</button>
+        <button class="icon-btn" id="leaderboardBtn" title="Leaderboard" aria-label="Leaderboard">🏆</button>
+        <button class="icon-btn" id="homeBtn" title="Home" aria-label="Home" style="display:none;">🏠</button>
+      </div>
+    </header>
+
+    <!-- HOME -->
+    <section id="homeScreen" class="screen">
+      <div class="hero">
+        <h1>Test Your Knowledge</h1>
+        <p>Colorful quizzes with lives, bonuses, streaks Fresh random questions every time — lives, bonuses, streaks & more. achievements.</p>
+      </div>
+
+      <div class="settings-row">
+        <div class="setting-group">
+          <label>Mode</label>
+          <div class="mode-selector">
+            <button class="mode-btn active" data-mode="exam">📝 Exam</button>
+            <button class="mode-btn" data-mode="practice">💡 Practice</button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <label>Difficulty</label>
+          <div class="difficulty-selector">
+            <button class="diff-btn active" data-diff="easy">Easy</button>
+            <button class="diff-btn" data-diff="medium">Medium</button>
+            <button class="diff-btn" data-diff="hard">Hard</button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <label>Questions</label>
+          <div class="count-selector">
+            <button class="count-btn" data-count="10">10</button>
+            <button class="count-btn active" data-count="20">20</button>
+            <button class="count-btn" data-count="30">30</button>
+            <button class="count-btn" data-count="50">50</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="categories-grid" id="categoriesGrid"></div>
+
+      <div class="start-section">
+        <button class="btn btn-primary" id="startBtn" disabled>Select a Category to Start</button>
+        <p class="api-note">Exam or Practice mode • All Questions map • Flag • Skip</p>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quizScreen" class="screen hidden">
+      <div class="quiz-header">
+        <div class="quiz-meta">
+          <div class="meta-item lives-item" id="livesItem" title="Lives remaining">
+            <span id="livesDisplay">❤️❤️❤️</span>
+          </div>
+          <div class="meta-item">
+            <span>⭐</span>
+            <strong id="quizScore">0</strong>
+          </div>
+          <div class="meta-item streak-item" title="Current streak">
+            <span>🔥</span>
+            <strong id="quizStreak">0</strong>
+          </div>
+          <div class="meta-item">
+            <span>📂</span>
+            <span id="quizCategory">—</span>
+          </div>
+        </div>
+        <div class="timer" id="timer">
+          <span>⏱️</span>
+          <span id="timerValue">15</span>s
+        </div>
+      </div>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+      </div>
+
+      <div class="question-card" id="questionCard">
+        <div class="question-number" id="questionNumber">Question 1 of 10</div>
+        <h2 class="question-text" id="questionText">Loading...</h2>
+      </div>
+
+      <div class="options-list" id="optionsList"></div>
+
+      <div class="quiz-footer">
+        <button class="btn btn-outline btn-sm" id="quitBtn">Quit</button>
+        <button class="btn btn-outline btn-sm" id="pauseBtn">⏸ Pause</button>
+        <button class="btn btn-outline btn-sm" id="overviewBtn" title="See all questions">📋 All Questions</button>
+        <button class="btn btn-outline btn-sm" id="flagBtn" title="Flag this question">🚩 Flag</button>
+        <button class="btn btn-secondary btn-sm" id="hintBtn" title="Remove two wrong answers">💡 50/50</button>
+        <button class="btn btn-outline btn-sm" id="skipBtn" title="Skip this question">⏭ Skip</button>
+        <button class="btn btn-primary btn-sm" id="nextBtn" disabled>Next →</button>
+      </div>
+      <p class="keyboard-hint">Keys: 1–4 answer • Enter next • H hint • P pause • S skip • M map • F flag</p>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="resultsScreen" class="screen hidden">
+      <div class="results-card">
+        <div class="score-circle" id="scoreCircle">
+          <div class="score-value" id="finalScore">0%</div>
+          <div class="score-label">Score</div>
+        </div>
+        <h2 class="results-title" id="resultsTitle">Great Job!</h2>
+        <p class="results-subtitle" id="resultsSubtitle">You scored 0 out of 10</p>
+
+        <div id="achievementsBox" class="achievements-box hidden"></div>
+
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="stat-value" id="statCorrect">0</div>
+            <div class="stat-label">Correct</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="statWrong">0</div>
+            <div class="stat-label">Wrong</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="statStreak">0</div>
+            <div class="stat-label">Best Streak</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="statBonus">0</div>
+            <div class="stat-label">Bonus Pts</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="statTime">0s</div>
+            <div class="stat-label">Avg Time</div>
+          </div>
+        </div>
+
+        <div class="results-actions">
+          <button class="btn btn-primary" id="reviewBtn">Review</button>
+          <button class="btn btn-secondary" id="playAgainBtn">Play Again</button>
+          <button class="btn btn-outline" id="shareBtn">📤 Share</button>
+          <button class="btn btn-outline" id="homeFromResultsBtn">Home</button>
+        </div>
+
+        <div class="save-score-box" id="saveScoreBox">
+          <h4>Save your score to the leaderboard</h4>
+          <div class="save-form">
+            <input type="text" id="playerName" placeholder="Enter your name" maxlength="20" />
+            <button class="btn btn-primary btn-sm" id="saveScoreBtn">Save</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REVIEW -->
+    <section id="reviewScreen" class="screen hidden">
+      <div class="hero" style="margin-bottom: 24px;">
+        <h1 style="font-size: 1.6rem;">Answer Review</h1>
+        <p>See where you got it right and where you can improve.</p>
+      </div>
+      <div class="review-list" id="reviewList"></div>
+      <div class="results-actions" style="margin-top: auto;">
+        <button class="btn btn-primary" id="backToResultsBtn">Back to Results</button>
+        <button class="btn btn-secondary" id="homeFromReviewBtn">Home</button>
+      </div>
+    </section>
+
+    <!-- LEADERBOARD -->
+    <section id="leaderboardScreen" class="screen hidden">
+      <div class="leaderboard-card">
+        <div class="leaderboard-header">
+          <h2>🏆 Leaderboard</h2>
+          <button class="btn btn-outline btn-sm" id="clearLeaderboardBtn">Clear</button>
+        </div>
+        <ul class="lb-list" id="leaderboardList"></ul>
+      </div>
+      <div class="results-actions" style="margin-top: 24px;">
+        <button class="btn btn-primary" id="homeFromLbBtn">Back to Home</button>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section id="statsScreen" class="screen hidden">
+      <div class="hero" style="margin-bottom: 20px;">
+        <h1 style="font-size: 1.6rem;">Your Stats</h1>
+        <p>Local progress tracking</p>
+      </div>
+      <div class="stats-dashboard" id="statsDashboard"></div>
+      <div class="results-actions" style="margin-top: 24px;">
+        <button class="btn btn-outline btn-sm" id="resetStatsBtn">Reset Stats</button>
+        <button class="btn btn-primary" id="homeFromStatsBtn">Back to Home</button>
+      </div>
+    </section>
+
+    <footer class="app-footer">
+      🌈 Colorful Edition • Exam / Practice Mode • Flag • All Questions
+    </footer>
+  </div>
+
+  <!-- Pause Overlay -->
+  <div id="pauseOverlay" class="pause-overlay hidden">
+    <div class="pause-box">
+      <h2>⏸ Paused</h2>
+      <p>Take your time. Timer is stopped.</p>
+      <button class="btn btn-primary" id="resumeBtn">Resume Quiz</button>
+    </div>
+  </div>
+
+  <!-- Question Map / Overview — see ALL questions in one frame -->
+  <div id="overviewOverlay" class="overview-overlay hidden">
+    <div class="overview-box">
+      <div class="overview-header">
+        <h2>📋 All Questions</h2>
+        <button class="icon-btn" id="closeOverviewBtn" title="Close">✕</button>
+      </div>
+      <p class="overview-legend">
+        <span class="leg current"></span> Current
+        <span class="leg answered"></span> Answered
+        <span class="leg skipped"></span> Skipped
+        <span class="leg flagged"></span> Flagged
+        <span class="leg unanswered"></span> Open
+      </p>
+      <div class="overview-list" id="overviewGrid"></div>
+      <p class="overview-hint">Tap any question to open it and answer</p>
+      <button class="btn btn-primary" id="closeOverviewBtn2">Continue Quiz</button>
+    </div>
+  </div>
+
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
